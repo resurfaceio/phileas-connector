@@ -2,7 +2,7 @@
 Phileas functions for Trino
 
 This [Trino](https://trino.io) connector uses [Phileas](https://github.com/philterd/phileas) to detect and redact PII tokens.
-Simple scalar functions are provided to redact `char` and `varchar` data provided by any other Trino data source.
+Simple scalar functions are provided to redact `varchar` data provided by any other Trino data source.
 
 [![CodeFactor](https://www.codefactor.io/repository/github/resurfaceio/phileas-connector/badge)](https://www.codefactor.io/repository/github/resurfaceio/phileas-connector)
 
