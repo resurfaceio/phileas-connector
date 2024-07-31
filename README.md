@@ -36,8 +36,8 @@ bash bin/launcher run
 Use DBeaver or your favorite SQL editor to try the `phileas_redact` function.
 
 ```
-select phileas_redact('this is a secret')
---> 'this is a ******'
+select phileas_redact('my email is rik@resurfacd.io')
+--> my email is ****************
 ```
 
 ---

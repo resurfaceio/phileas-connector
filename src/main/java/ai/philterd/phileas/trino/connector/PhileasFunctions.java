@@ -16,6 +16,14 @@
 
 package ai.philterd.phileas.trino.connector;
 
+import ai.philterd.phileas.model.configuration.PhileasConfiguration;
+import ai.philterd.phileas.model.enums.MimeType;
+import ai.philterd.phileas.model.policy.Identifiers;
+import ai.philterd.phileas.model.policy.Policy;
+import ai.philterd.phileas.model.policy.filters.EmailAddress;
+import ai.philterd.phileas.model.policy.filters.strategies.AbstractFilterStrategy;
+import ai.philterd.phileas.model.policy.filters.strategies.rules.EmailAddressFilterStrategy;
+import ai.philterd.phileas.services.PhileasFilterService;
 import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.trino.spi.function.Description;
@@ -23,6 +31,10 @@ import io.trino.spi.function.ScalarFunction;
 import io.trino.spi.function.SqlNullable;
 import io.trino.spi.function.SqlType;
 
+import java.util.List;
+import java.util.Properties;
+
+import static com.google.common.base.Strings.nullToEmpty;
 import static io.airlift.slice.Slices.utf8Slice;
 
 public final class PhileasFunctions {
@@ -32,17 +44,46 @@ public final class PhileasFunctions {
     @ScalarFunction("phileas_redact")
     @SqlType("varchar")
     public static Slice redact(@SqlType("varchar") Slice s) {
-        if (config != null) log.info("redacting with policy.file=" + config.getPolicyFile());
-        return (s == null) ? null : utf8Slice(s.toStringUtf8().replaceAll("secret", "******"));  // todo replace with filter
+        try {
+            return s == null ? null : slice(filterService.filter(policy, "<cxt>", "<doc>", s.toStringUtf8(), MimeType.TEXT_PLAIN).filteredText());
+        } catch (Exception e) {
+            log.error(e);
+            return null;
+        }
+    }
+
+    static Slice slice(String s) {
+        return utf8Slice(nullToEmpty(s));
     }
 
     static void use(PhileasConfig config) {
-        if (config != null) log.info("using phileas config: policy.file=" + config.getPolicyFile());
-        PhileasFunctions.config = config;
-        // todo initialize PhileasFilterService
+        if (config != null) log.info("using phileas config: policy.file=" + config.getPolicyFile());     // todo use file to configure identifiers
+
+        // configure identifiers to mask email addresses (temporary)
+        Identifiers identifiers = new Identifiers();
+        EmailAddressFilterStrategy fs = new EmailAddressFilterStrategy();
+        fs.setStrategy(AbstractFilterStrategy.MASK);
+        fs.setMaskCharacter("*");
+        fs.setMaskLength(AbstractFilterStrategy.SAME);
+        EmailAddress x = new EmailAddress();
+        x.setEmailAddressFilterStrategies(List.of(fs));
+        identifiers.setEmailAddress(x);
+
+        // create filter service
+        try {
+            policy = new Policy();
+            policy.setName("default");
+            policy.setIdentifiers(identifiers);
+            Properties properties = new Properties();
+            PhileasConfiguration configuration = new PhileasConfiguration(properties, "phileas");
+            filterService = new PhileasFilterService(configuration);
+        } catch (Exception e) {
+            log.error(e);
+        }
     }
 
-    private static PhileasConfig config;
+    private static PhileasFilterService filterService;
+    private static Policy policy;
 
     private static final Logger log = Logger.get(PhileasFunctions.class);
 
