@@ -17,6 +17,7 @@ Simple scalar functions are provided to redact `varchar` data provided by any ot
 ```
 1. Install Trino
 download and expand tarball to local directory
+create etc directory as described here: https://trino.io/docs/current/installation/deployment.html
 export TRINO_HOME=$HOME/...
 
 2. Create $TRINO_HOME/etc/catalog/phileas.properties:
